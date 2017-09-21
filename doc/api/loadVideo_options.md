@@ -73,13 +73,14 @@ This property is mandatory if the content uses DRM.
 This property is an array of objects with the following properties (only ``type`` and ``getLicense`` are mandatory here):
   - ``type`` (``string``): the type of keySystem used (e.g. ``"widevine"``, ``"playready"`` ...)
 
+<<<<<<< HEAD
   - ``getLicense`` (``Function``): Callback which will be triggered everytime a message is sent by the Content Decryption Module (CDM), usually to fetch/renew the license.
 
     Gets two arguments when called:
       1. the message (``Uint8Array``): The message, formatted to an Array of bytes.
       2. the messageType (``string``): String describing the type of message received. There is only 4 possible message types, all defined in [the w3c specification](https://www.w3.org/TR/encrypted-media/#dom-mediakeymessagetype).
 
-      This function should return either synchronously the license, or a Promise which:
+      This function should return either synchronously the license, an observable or a Promise which:
       - resolves if the license was fetched, with the licence in argument
 
       - reject if an error was encountered
@@ -87,6 +88,107 @@ This property is an array of objects with the following properties (only ``type`
       In any case, the license provided by this function should be of a ``BufferSource`` type (example: an ``Uint8Array`` or an ``ArrayBuffer``).
 
       Note: We set a 10 seconds timeout on this request. If the returned Promise do not resolve or reject under this limit, the player will stop with an error. If this limit is problematic for you, please open an issue.
+
+      ---
+
+      You might prefer to use a Promise in most cases as it's the most straightforward. The advantage of using an Observable is the added ability to cancel the request if needed (for example, calling xhr.abort as the player stops). If this is enough of a reason for you, please read the following paragraph to be sure your given Observable is compatible with ``getLicense``:
+
+      Is considered an Observable here any object with the following method:
+
+      - ``subscribe``: Launch the license request when called. Takes the following arguments (which will be provided by us on call), in order:
+          - A callback you should trigger when receiving the license with the corresponding license in argument.
+          - A callback you should trigger on error with the corresponding error in argument
+
+      If you want to add cancelation capabilities, this function should return an object with the following function:
+
+      -  ``unsubscribe``: function which will be called when/if the license request is canceled. This function does not take any argument.
+
+      Most versions of RxJS already respect this interface, if you want to implement it from scratch, you can follow this example:
+      ```js
+      /**
+       * Will be called with the message and messageType in arguments once
+       * available.
+       * @param {UInt8Array} message
+       * @param {string} messageType
+       * @returns {Function}
+       */
+      function getLicense(message, messageType) {
+        /*
+         * Will be called by the rx-player to trigger the request.
+         * @param {Function} cbOnResponse - Callback to call on response with
+         * the corresponding license.
+         * @param {Function} cbOnError - Callback to call on error with the
+         * corresponding error.
+         * @returns {Object} - Optional object with a unsubscribe function,
+         * which will be called when/if the request is canceled.
+         */
+        return (cbOnResponse, cbOnError) => {
+          subscribe: (cbOnResponse, cbOnError) => {
+            // let's imagine a cancellable promise here, implementing both a
+            // ``then`` and ``cancel`` method.
+            const cancelablePromise = fetchLicense(message, messageType);
+
+            cancelablePromise.then(
+              // on success
+              (license) => cbOnResponse(license),
+
+              // on error
+              (error) => cbOnError(error)
+            );
+
+            // might be called by the rx-player, if defined, when/if the
+            // request is canceled
+            return {
+              cancelablePromise.cancel();
+            };
+          }
+        };
+      }
+
+      /**
+       * Will be called with the message and messageType in arguments once
+       * available.
+       * @param {UInt8Array} message
+       * @param {string} messageType
+       * @returns {Object}
+       */
+      function getLicense(message, messageType) {
+        return {
+          /*
+           * Will be called by the rx-player to trigger the request.
+           * @param {Function} cbOnResponse - Callback to call on response with
+           * the corresponding license.
+           * @param {Function} cbOnError - Callback to call on error with the
+           * corresponding error.
+           * @returns {Object} - Optional object with a unsubscribe function,
+           * which will be called when/if the request is canceled.
+           */
+          subscribe: (cbOnResponse, cbOnError) => {
+            // let's imagine a cancellable promise here, implementing both a
+            // ``then`` and ``cancel`` method.
+            const cancelablePromise = fetchLicense(message, messageType);
+
+            cancelablePromise.then(
+              // on success
+              (license) => cbOnResponse(license),
+
+              // on error
+              (error) => cbOnError(error)
+            );
+
+            return {
+              // might be called by the rx-player, if defined, when/if the
+              // request is canceled
+              unsubscribe: () => {
+                cancelablePromise.cancel();
+              }
+            };
+          }
+        };
+      }
+      ```
+
+      ---
 
   - ``serverCertificate`` (``BufferSource|undefined``): Eventual certificate used to encrypt messages to the license server.
     If set, we will try to set this certificate on the CDM. If it fails, we will still continue (albeit a warning will be emitted) to try deciphering the stream (the getLicense API will be triggered etc.).
@@ -311,4 +413,4 @@ This has an effect only if:
   - a text track is currently active
   - the text track format is understood by the rx-player
 
-This option can be useful if you want to set your own logic to display the video subtitles. In that case, you can just take the <track> element (``getNativeTextTrack`` method or ``nativeTextTrackChange`` event) and 
+This option can be useful if you want to set your own logic to display the video subtitles. In that case, you can just take the <track> element (``getNativeTextTrack`` method or ``nativeTextTrackChange`` event) and

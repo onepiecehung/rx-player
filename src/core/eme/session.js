@@ -135,6 +135,7 @@ function sessionEventsHandler(session, keySystem, errorStream) {
 
       const getLicense = Observable.defer(() => {
         return castToObservable(keySystem.getLicense(message, messageType))
+          .take(1)
           .timeout(10 * 1000)
           .catch(error => {
             if (error instanceof TimeoutError) {
