@@ -37,4 +37,9 @@ export default [
     "transport": "smooth",
     "live": true,
   },
+  {
+    "name": "Test MP4",
+    "url": "https://gyges.feralhosting.com/pb/torrents/directory-list/..%2Fcoffee-the.drink.that.changed.america.hdtv.x264-w4f.mp4",
+    "transport": "directfile",
+  },
 ];
