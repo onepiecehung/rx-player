@@ -50,12 +50,14 @@ const getSegmentIndex = (index, ts) => {
 };
 
 /**
- * @param {Number} ts
- * @param {Number} up
- * @param {Number} duration
+ * With the hypotesis that the given segment repeat infinitely, returns the
+ * number of segments we need to skip to get the one with the wanted time in it.
+ * @param {Number} up - wanted time
+ * @param {Number} ts - start time of the segment
+ * @param {Number} duration - duration of the segment
  * @returns {Number}
  */
-const getSegmentNumber = (ts, up, duration) => {
+const getSegmentNumber = (up, ts, duration) => {
   const diff = up - ts;
   if (diff > 0) {
     return Math.floor(diff / duration);
@@ -65,15 +67,22 @@ const getSegmentNumber = (ts, up, duration) => {
 };
 
 /**
- * Calculate the number of times a segment repeat based on the next segment.
+ * Calculate the number of times a segment is repeated.
+ *
+ * This is either based on:
+ *   - the repeat attribute @r
+ *   - the time of the nextSegment  if @r is negative.
+ *
  * @param {Object} seg
  * @param {Number} seg.ts - beginning timescaled timestamp
  * @param {Number} seg.d - timescaled duration of the segment
+ * @param {Number} [seg.r=0] - amount of time the segment is repeated
  * @param {Object} nextSeg
- * @param {Number} nextSeg.t - TODO check that one
+ * @param {Number} nextSeg.t - TODO check that one, shouldn't that be
+ * ".ts?"
  * @returns {Number}
  */
-const calculateRepeat = (seg, nextSeg) => {
+const getRepeat = (seg, nextSeg) => {
   let rep = seg.r || 0;
 
   // A negative value of the @r attribute of the S element indicates
@@ -105,20 +114,25 @@ const SegmentTimelineHelpers = {
   getSegments(repId, index, _up, _to) {
     const { up, to } = normalizeRange(index, _up, _to);
 
-    const { timeline, timescale, media } = index;
+    const { timeline, timescale, media, startNumber } = index;
     const segments = [];
 
     const timelineLength = timeline.length;
     let timelineIndex = getSegmentIndex(index, up) - 1;
+
     // TODO(pierre): use @maxSegmentDuration if possible
     let maxDuration = (timeline.length && timeline[0].d) || 0;
 
+    let number = (startNumber == null ? 0 : startNumber) - 1;
+
+    // TODO less lisible loop please
     loop:
     for(;;) {
       if (++timelineIndex >= timelineLength) {
         break;
       }
 
+      number++;
       const segmentRange = timeline[timelineIndex];
       const { d, ts, range } = segmentRange;
       maxDuration = Math.max(maxDuration, d);
@@ -135,23 +149,35 @@ const SegmentTimelineHelpers = {
             indexRange: null,
             timescale,
             media,
+            number,
           };
           segments.push(new Segment(args));
         }
         break;
       }
 
-      const repeat = calculateRepeat(segmentRange, timeline[timelineIndex + 1]);
-      let segmentNumber = getSegmentNumber(ts, up, d);
+      const repeat = getRepeat(segmentRange, timeline[timelineIndex + 1]);
+      let segmentNumber = getSegmentNumber(up, ts, d);
+
+      // if we are out of the current segment range, continue
+      if (segmentNumber > repeat) {
+        number += repeat; // we will skip _repeat_ segments here
+        continue loop;
+      }
+
       let segmentTime;
+
+      // while before our upper limit
       while ((segmentTime = ts + segmentNumber * d) < to) {
         if (segmentNumber++ <= repeat) {
+          number++;
           const args = {
             id: "" + repId + "_" + segmentTime,
             time: segmentTime,
             init: false,
             range: range,
             duration: d,
+            number,
             indexRange: null,
             timescale,
             media,
