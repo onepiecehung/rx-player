@@ -19,6 +19,15 @@ import {
   PersistedSessionsSet,
 } from "./sessions_set";
 
+// Persisted singleton instance of MediaKeys. We do not allow multiple
+// CDM instances.
+const instanceInfos = {
+  $mediaKeys: null,  // MediaKeys instance
+  $mediaKeySystemConfiguration: null, // active MediaKeySystemConfiguration
+  $keySystem: null,
+  $videoElement: null,
+};
+
 const emptyStorage = {
   load() { return []; },
   save() {},
@@ -33,6 +42,7 @@ if (__DEV__) {
 }
 
 export {
+  instanceInfos,
   $storedSessions,
   $loadedSessions,
 };

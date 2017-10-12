@@ -23,6 +23,10 @@
 //   - RXP_DIRECTFILE
 //   If set to "false", all code relative to direct file streaming will be
 //   ignored during a build
+//
+//   - RXP_EME
+//   If set to "false", all code relative to encrypted contents will be
+//   ignored during a build
 
 const ClosureCompiler = require("webpack-closure-compiler");
 
@@ -64,6 +68,7 @@ const config = {
         SMOOTH: process.env.RXP_SMOOTH !== "false",
         DASH: process.env.RXP_DASH !== "false",
         DIRECTFILE: process.env.RXP_DIRECTFILE !== "false",
+        EME: process.env.RXP_EME !== "false",
 
         // TODO
         // TTML: process.env.RXP_TTML !== "false",

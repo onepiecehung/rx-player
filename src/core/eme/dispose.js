@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-// EME is feature-switchable
-const HAS_EME = __FEATURES__.EME;
+import {
+  $loadedSessions,
+  instanceInfos,
+} from "./globals.js";
+import { disposeMediaKeys } from "./set_media_keys.js";
 
-const handleEncryption = HAS_EME ?
-  require("./encrypted_event.js") :
-  () => {
-    throw new Error("The EME feature is not included in your build.");
-  };
-
-const getCurrentKeySystem = HAS_EME ?
-  require("./key_system.js").getCurrentKeySystem :
-  () => {
-    throw new Error("The EME feature is not included in your build.");
-  };
-
-const dispose = HAS_EME ?
-  require("./dispose.js") :
-  () => {};
-
-export {
-  handleEncryption,
-  getCurrentKeySystem,
-  dispose,
-};
+/**
+ * Free up all ressources taken by the EME management.
+ */
+export default function dispose() {
+  // Remove MediaKey before to prevent MediaKey error
+  // if other instance is creating after dispose
+  disposeMediaKeys(instanceInfos.$videoElement).subscribe(() => {});
+  instanceInfos.$mediaKeys = null;
+  instanceInfos.$keySystem = null;
+  instanceInfos.$videoElement = null;
+  instanceInfos.$mediaKeySystemConfiguration = null;
+  $loadedSessions.dispose();
+}

@@ -16,7 +16,8 @@
 
 import { EncryptedMediaError } from "../../errors";
 import log from "../../utils/log";
-import { createEME, onEncrypted } from "../eme";
+import { handleEncryption } from "../eme";
+import { onEncrypted } from "../../compat/events.js";
 
 /**
  * Perform EME management if needed.
@@ -27,7 +28,7 @@ import { createEME, onEncrypted } from "../eme";
  */
 function createEMEIfKeySystems(videoElement, keySystems, errorStream) {
   if (keySystems && keySystems.length) {
-    return createEME(videoElement, keySystems, errorStream);
+    return handleEncryption(videoElement, keySystems, errorStream);
   } else {
     return onEncrypted(videoElement).map(() => {
       log.error("eme: ciphered media and no keySystem passed");

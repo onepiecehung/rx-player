@@ -45,6 +45,7 @@ const config = {
         SMOOTH: true,
         DASH: true,
         DIRECTFILE: true,
+        EME: true,
 
         // TODO
         // TTML: true,

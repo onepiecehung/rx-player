@@ -28,12 +28,14 @@ import {
   EncryptedMediaError,
 } from "../../errors";
 
+import { instanceInfos } from "./globals.js";
+
 const {
   EME_DEFAULT_WIDEVINE_ROBUSTNESSES,
   EME_KEY_SYSTEMS,
 } = config;
 
-function getCachedKeySystemAccess(keySystems, instanceInfos = {}) {
+function getCachedKeySystemAccess(keySystems) {
   const {
     $keySystem,
     $mediaKeys,
@@ -299,13 +301,13 @@ function findCompatibleKeySystem(keySystems, instanceInfos) {
   });
 }
 
-function getKeySystem(instanceInfos = {}) {
+function getCurrentKeySystem() {
   return instanceInfos.$keySystem && instanceInfos.$keySystem.type;
 }
 
 export {
   findCompatibleKeySystem,
-  getKeySystem,
+  getCurrentKeySystem,
 };
 
 export default findCompatibleKeySystem;
